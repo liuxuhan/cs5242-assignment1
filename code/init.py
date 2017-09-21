@@ -9,6 +9,22 @@ def loadBias(array, file):
         for row in reader:
             array.append(np.array(row[1:]).astype(float))
 
+def loadWeight(array,file,nodes):
+    with open(file) as f:
+        reader = csv.reader(f)
+        layer=0
+        index=0
+        rowData = np.empty(shape=(nodes[layer], nodes[layer+1]))
+        for row in reader:
+            rowData[index] = np.array(row[1:]).astype(float)
+            index+=1
+            if(index == nodes[layer]):
+                array.append(rowData)
+                layer+=1
+                index =0
+                if(layer==3):
+                    return
+                rowData=np.empty(shape=(nodes[layer], nodes[layer+1]))
 
 # define activation function
 
