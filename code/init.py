@@ -29,7 +29,7 @@ def loadWeight(array,file,nodes):
 # define activation function
 
 def softmax(z):
-    return np.exp(z) / np.sum(np.exp(z), axis=1, keepdims=True)
+    return np.exp(z) / np.sum(np.exp(z))
 
 
 def relu(z):
