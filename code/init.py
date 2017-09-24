@@ -36,10 +36,9 @@ def loadWeight(file, nodes):
 # define activation function
 
 def softmax(z):
-    if z[0][0] >= 100000:
+    if np.amax(z) >= 10000:
         z = z - np.amax(z)
-    else:
-        z = np.float128(z)
+    z = np.float128(z)
     return np.exp(z) / np.sum(np.exp(z))
 
 
@@ -48,11 +47,12 @@ def relu(z):
 
 
 def D_relu(X):
+    X[X==0] = -1
     return 1 * (X > 0)
 
 
 def exportFile(fileName, data):
-    addr = '../e0146241/' + fileName
+    addr = '../e0146241-test/' + fileName
     if os.path.isfile(addr):
         os.remove(addr)
 

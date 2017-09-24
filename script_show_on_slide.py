@@ -11,7 +11,7 @@ import zipfile
     For verification, you can comment out the line11 to 15, and change the truth_path and ID to 'b', however, do note the grading process WILL contain these lines.
 """
 ID = 'e0146241-test'
-truth_path = 'data' #change truth_path = 'b' for verification
+truth_path = 'b' #change truth_path = 'b' for verification
 # zip_ref = zipfile.ZipFile(ID+'.zip', 'r')
 # zip_ref.extractall('.')
 # zip_ref.close()
