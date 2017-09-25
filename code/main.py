@@ -7,7 +7,7 @@ import os.path
 from init import loadBias, loadWeight, softmax, D_relu, exportFile, relu
 
 
-np.set_printoptions(precision=16)
+np.set_printoptions(precision=20)
 
 
 # Define softmax layer class
@@ -70,9 +70,9 @@ def backpropagation(activations, targets, layers):
         else:
             input_grad = layer.get_input_grad(Y, output_grad)
         X = activations[-1]
-        w_grad = np.float32(X.T.dot(input_grad))
+        w_grad = np.float32(X.T.dot(input_grad)/input_grad.shape[0])
         if input_grad.shape[0] > 1:
-            b_grad = np.float32(np.sum(input_grad, axis=0))
+            b_grad = np.float32(np.mean(input_grad, axis=0))
         else:
             b_grad = np.float32(input_grad)
         w_grads.append(w_grad)
@@ -114,11 +114,11 @@ def dimInList(layers, nodes):
 def training(layers, x, y, wfile, bfile, isTraining, rate, cost):
     # forward
     output = forward(x, layers)
+    cost.append(layers[-1].cost(output[-1], y))
     # backpropagation
     output_copy = copy.deepcopy(output)
     w_grads, b_grads = backpropagation(output_copy, y, layers)
     if isTraining:
-        cost.append(layers[-1].cost(output[-1], y))
         index = 0
         for layer in reversed(layers):
             layer.weight -= w_grads[index] * rate
@@ -130,8 +130,8 @@ def training(layers, x, y, wfile, bfile, isTraining, rate, cost):
 
 
 def q4():
-    x_test = np.array([[-1, 1, 1, 1, -1, -1, 1, -1, 1, 1, -1, -1, 1, 1]])
-    y_test = np.array([[0, 0, 0, 1]])
+    x_sample = np.array([[-1, 1, 1, 1, -1, -1, 1, -1, 1, 1, -1, -1, 1, 1]])
+    y_sample = np.array([[0, 0, 0, 1]])
 
     # load weight and bias for first NN
     b_100_40_4 = loadBias('../b/b-100-40-4.csv')
@@ -149,9 +149,9 @@ def q4():
     layer3 = initLayer(3, w_14_28_4, b_14_28_4)
 
     # run one-time training
-    training(layer1, x_test, y_test, 'dw-100-40-4.csv', 'db-100-40-4.csv', False, 1, [])
-    training(layer2, x_test, y_test, 'dw-28-6-4.csv', 'db-28-6-4.csv', False, 1, [])
-    training(layer3, x_test, y_test, 'dw-14-28-4.csv', 'db-14-28-4.csv', False, 1, [])
+    training(layer1, x_sample, y_sample, 'dw-100-40-4.csv', 'db-100-40-4.csv', False, 1, [])
+    training(layer2, x_sample, y_sample, 'dw-28-6-4.csv', 'db-28-6-4.csv', False, 1, [])
+    training(layer3, x_sample, y_sample, 'dw-14-28-4.csv', 'db-14-28-4.csv', False, 1, [])
     print 'Result generated'
 
 
@@ -204,9 +204,8 @@ def storeParameter(path,loop,w):
 
 def accuracy(input,layers,target):
     output = forward(input,layers)
-    output_last_layer = output[len(layers)]
-    output_digit = np.zeros_like(output_last_layer)
-    output_digit[np.arange(len(output_last_layer)), output_last_layer.argmax(1)] = 1
+    output_digit = np.zeros_like(output[-1])
+    output_digit[np.arange(len(output[-1])), output[-1].argmax(1)] = 1
     tf = np.equal(output_digit, target).all(axis=1)
     return np.float32(np.sum(tf))/np.float32(target.shape[0])*100
 
@@ -215,29 +214,32 @@ def q123():
 
     # initial weight and bias for first NN
     w_100_40_4, b_100_40_4 = generateParameter(1)
-    w_100_40_4 = loadinitW('../initParam1',3)
+    # w_100_40_4 = loadinitW('../initParam1',3)
     layer1 = initLayer(1, w_100_40_4, b_100_40_4)
     #storeParameter('../initParam1',3,w_100_40_4)
     # initial weight and bias for second NN
-    # w_28_6_4, b_28_6_4 = generateParameter(2)
-    # layer2 = initLayer(2, w_28_6_4, b_28_6_4)
-    #
+    w_28_6_4, b_28_6_4 = generateParameter(2)
+    layer2 = initLayer(2, w_28_6_4, b_28_6_4)
+
     # # initial weight and bias for third NN
     # w_14_28_4,b_14_28_4 = generateParameter(3)
     # layer3 = initLayer(3, w_14_28_4, b_14_28_4)
 
-    cost1 = []
+    cost = []
     score = []
-    cost2 = []
-    cost3 = []
-    cost_test = []
-    for i in range(0,500):
-        training(layer1, np.array([x_train[i]]), np.array([y_train[i]]), '', '', True, 1, cost1)
-        score.append(accuracy(x_train,layer1,y_train))
+    # cost2 = []
+    # cost3 = []
+    # cost_test = []
+    step = 32
+    learning_rate = 1
+    for i in range(0,13000,step):
+        training(layer2, x_train[i:i+step],y_train[i:i+step], '', '', True, learning_rate, cost)
+        score.append(accuracy(x_train,layer2,y_train))
 
-    print 'NN1 is trained'
-    print cost1
+    print 'NN is trained'
+    print cost
     print score
+    print np.amax(score)
 
     # for i in range(len(x_test)):
     #     training(layer1, np.array([x_test[i]]), np.array([y_test[i]]), '', '', True, 0.5, cost_test)
@@ -263,11 +265,16 @@ def q123():
 
 
 def test():
-   for i in range(0,100,5):
-       print i
+    a = np.array([[1.,2.,3.,4.],[2.,3.,4.,5.],[1.,2.,3.,4.]])
+    sum = np.sum(a, axis=0)
+    avg = np.mean(a,axis=0)
+    a -= a/2
+    print a
+    print avg
+
 
 
 
 
 if __name__ == "__main__":
-    q123()
+    q4()
