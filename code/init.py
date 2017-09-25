@@ -15,7 +15,7 @@ def loadBias(file):
 
 def loadWeight(file, nodes):
     array = []
-    stopPoint = len(nodes) -1
+    stopPoint = len(nodes) - 1
     with open(file) as f:
         reader = csv.reader(f)
         layer = 0
@@ -36,10 +36,9 @@ def loadWeight(file, nodes):
 # define activation function
 
 def softmax(z):
-    if np.amax(z) >= 10000:
-        z = z - np.amax(z)
-    z = np.float128(z)
-    return np.exp(z) / np.sum(np.exp(z))
+    z = z - np.amax(z)
+    exps = np.exp(z)
+    return exps / np.sum(exps, axis=1, keepdims=True)
 
 
 def relu(z):
@@ -47,7 +46,6 @@ def relu(z):
 
 
 def D_relu(X):
-    X[X==0] = -1
     return 1 * (X > 0)
 
 
@@ -58,4 +56,4 @@ def exportFile(fileName, data):
 
     with open(addr, 'ab') as fp:
         for item in reversed(data):
-            np.savetxt(fp, item, delimiter=',', fmt='%.16g')
+            np.savetxt(fp, item, delimiter=',', fmt='%.17g')

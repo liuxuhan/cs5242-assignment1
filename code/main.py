@@ -27,7 +27,7 @@ class softMaxLayer():
         return softmax(X)
 
     def get_input_grad(self, Y, T):
-        return (Y - T) / Y.shape[0]
+        return (Y - T)
 
 
 # Define relu layer class
@@ -54,7 +54,6 @@ def forward(input, layers):
     for layer in layers:
         x = layer.get_output(np.dot(np.array(x), layer.weight) + layer.bias)
         outputs.append(x)
-        x = outputs[-1]
         index += 1
     return outputs
 
@@ -70,9 +69,9 @@ def backpropagation(activations, targets, layers):
         else:
             input_grad = layer.get_input_grad(Y, output_grad)
         X = activations[-1]
-        w_grad = np.float32(X.T.dot(input_grad))
+        w_grad = np.float32(X.T.dot(input_grad)/input_grad.shape[0])
         if input_grad.shape[0] > 1:
-            b_grad = np.float32(np.sum(input_grad, axis=0))
+            b_grad = np.float32(np.mean(input_grad, axis=0))
         else:
             b_grad = np.float32(input_grad)
         w_grads.append(w_grad)
@@ -111,14 +110,19 @@ def dimInList(layers, nodes):
     return dim
 
 
-def training(layers, x, y, wfile, bfile, isTraining, rate, cost):
+def training(layers, x, y, wfile, bfile, isTraining, rate, costList):
     # forward
     output = forward(x, layers)
-    # backpropagation
+
+    # save copy of output
     output_copy = copy.deepcopy(output)
+
+    #calculate cost
+    costList.append(layers[-1].cost(output[-1], y))
+
+    # backpropagation
     w_grads, b_grads = backpropagation(output_copy, y, layers)
     if isTraining:
-        cost.append(layers[-1].cost(output[-1], y))
         index = 0
         for layer in reversed(layers):
             layer.weight -= w_grads[index] * rate
@@ -169,25 +173,29 @@ def generateParameter(type):
     bias = []
     weight = []
     if type == 1:
-        weight.append(np.random.randn(14, 100) * 0.1)
-        weight.append(np.random.randn(100, 40) * 0.1)
-        weight.append(np.random.randn(40, 4) * 0.1)
+        weight.append(np.random.uniform(14, 100))
+        weight.append(np.random.uniform(100, 40))
+        weight.append(np.random.uniform(40, 4))
         return weight, [np.ones(shape=(1, 100)), np.ones(shape=(1, 40)), np.ones(shape=(1, 4))]
     elif type == 2:
-        weight.append(np.random.randn(14, 28) * 0.1)
         for i in range(6):
-            bias.append(np.ones(shape=(1, 28)))
-        bias.append(np.ones(shape=(1, 4)))
+            bias.append(np.zeros(shape=(1, 28)))
+            bias.append(np.zeros(shape=(1, 4)))
+
+        r = math.sqrt(2.0/14)
+        weight.append(np.random.uniform(size=(14, 28),low=-r,high=r))
         for i in range(5):
-            weight.append(np.random.randn(28, 28) * 0.1)
-        weight.append(np.random.randn(28, 4) * 0.1)
+            r = math.sqrt(2.0/28)
+            weight.append(np.random.uniform(size=(28, 28),low=-r,high=r))
+        r = math.sqrt(2.0/28)
+        weight.append(np.random.uniform(size=(28, 4),low=-r,high=r))
         return weight, bias
     elif type == 3:
         for i in range(28):
             bias.append(np.ones(shape=(1, 14)))
-            weight.append(np.random.randn(14, 14) * 0.1)
+            weight.append(np.random.randn(14, 14))
         bias.append(np.ones(shape=(1, 4)))
-        weight.append(np.random.randn(14, 4) * 0.1)
+        weight.append(np.random.randn(14, 4))
         return weight, bias
 
 def loadinitW(path,loop):
@@ -215,29 +223,34 @@ def q123():
 
     # initial weight and bias for first NN
     w_100_40_4, b_100_40_4 = generateParameter(1)
-    w_100_40_4 = loadinitW('../initParam1',3)
+    # w_100_40_4 = loadinitW('../initParam1',3)
     layer1 = initLayer(1, w_100_40_4, b_100_40_4)
     #storeParameter('../initParam1',3,w_100_40_4)
-    # initial weight and bias for second NN
-    # w_28_6_4, b_28_6_4 = generateParameter(2)
-    # layer2 = initLayer(2, w_28_6_4, b_28_6_4)
+
+
+    #initial weight and bias for second NN
+    w_28_6_4, b_28_6_4 = generateParameter(2)
+    layer2 = initLayer(2, w_28_6_4, b_28_6_4)
     #
     # # initial weight and bias for third NN
     # w_14_28_4,b_14_28_4 = generateParameter(3)
     # layer3 = initLayer(3, w_14_28_4, b_14_28_4)
 
-    cost1 = []
+    cost = []
     score = []
-    cost2 = []
-    cost3 = []
-    cost_test = []
-    for i in range(0,500):
-        training(layer1, np.array([x_train[i]]), np.array([y_train[i]]), '', '', True, 1, cost1)
-        score.append(accuracy(x_train,layer1,y_train))
+    step = 10
+    learning_rate = 1
+    usedLayer = layer2
+    for i in range(0,x_train.shape[0],step):
+        training(usedLayer, x_train[i:i+step], y_train[i:i+step], '', '', True, learning_rate, cost)
+        score.append(accuracy(x_train,usedLayer,y_train))
 
-    print 'NN1 is trained'
-    print cost1
-    print score
+    print 'NN is trained'
+    print np.amax(score)
+    line = plt.plot(cost)
+    plt.setp(line, color='b', linewidth=1.0)
+    plt.ylabel('Cross Entropy Cost')
+    plt.show()
 
     # for i in range(len(x_test)):
     #     training(layer1, np.array([x_test[i]]), np.array([y_test[i]]), '', '', True, 0.5, cost_test)
@@ -263,11 +276,8 @@ def q123():
 
 
 def test():
-   for i in range(0,100,5):
-       print i
-
-
+    print 'sds'
 
 
 if __name__ == "__main__":
-    q123()
+    q4()
