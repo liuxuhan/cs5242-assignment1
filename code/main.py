@@ -126,7 +126,7 @@ def training(layers, x, y, wfile, bfile, isTraining, rate, costList):
         index = 0
         for layer in reversed(layers):
             layer.weight -= w_grads[index] * rate
-            layer.bias -= b_grads[index]
+            layer.bias -= b_grads[index] * rate
             index += 1
     else:
         exportFile(bfile, b_grads)
@@ -178,10 +178,13 @@ def generateParameter(type):
         weight.append(np.random.uniform(40, 4))
         return weight, [np.ones(shape=(1, 100)), np.ones(shape=(1, 40)), np.ones(shape=(1, 4))]
     elif type == 2:
+
+        #bias
         for i in range(6):
             bias.append(np.zeros(shape=(1, 28)))
-            bias.append(np.zeros(shape=(1, 4)))
+        bias.append(np.zeros(shape=(1, 4)))
 
+        #weight
         r = math.sqrt(2.0/14)
         weight.append(np.random.uniform(size=(14, 28),low=-r,high=r))
         for i in range(5):
@@ -212,9 +215,8 @@ def storeParameter(path,loop,w):
 
 def accuracy(input,layers,target):
     output = forward(input,layers)
-    output_last_layer = output[len(layers)]
-    output_digit = np.zeros_like(output_last_layer)
-    output_digit[np.arange(len(output_last_layer)), output_last_layer.argmax(1)] = 1
+    output_digit = np.zeros_like(output[-1])
+    output_digit[np.arange(len(output[-1])), output[-1].argmax(1)] = 1
     tf = np.equal(output_digit, target).all(axis=1)
     return np.float32(np.sum(tf))/np.float32(target.shape[0])*100
 
@@ -236,14 +238,19 @@ def q123():
     # w_14_28_4,b_14_28_4 = generateParameter(3)
     # layer3 = initLayer(3, w_14_28_4, b_14_28_4)
 
+
+
     cost = []
     score = []
-    step = 10
-    learning_rate = 1
+    step = 32
+    learning_rate = 0.25
     usedLayer = layer2
-    for i in range(0,x_train.shape[0],step):
-        training(usedLayer, x_train[i:i+step], y_train[i:i+step], '', '', True, learning_rate, cost)
-        score.append(accuracy(x_train,usedLayer,y_train))
+
+    for i in range(100):
+        x_train,y_train = unison_shuffled_copies(x_train,y_train)
+        for i in range(0,x_train.shape[0],step):
+            training(usedLayer, x_train[i:i+step], y_train[i:i+step], '', '', True, learning_rate, cost)
+            score.append(accuracy(x_train,usedLayer,y_train))
 
     print 'NN is trained'
     print np.amax(score)
@@ -273,11 +280,16 @@ def q123():
     # plt.ylabel('Cross Entropy Cost')
     # plt.show()
 
-
+def unison_shuffled_copies(a, b):
+    assert len(a) == len(b)
+    p = np.random.permutation(len(a))
+    return a[p],b[p]
 
 def test():
-    print 'sds'
+    a = np.array([[1,1,1,1],[2,2,2,2],[3,3,3,3,],[4,4,4,4]])
+    b = np.array([[1],[2],[3],[4]])
+    unison_shuffled_copies(a,b)
 
 
 if __name__ == "__main__":
-    q4()
+    q123()
