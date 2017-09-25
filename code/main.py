@@ -6,7 +6,6 @@ import shutil
 import os.path
 from init import loadBias, loadWeight, softmax, D_relu, exportFile, relu
 
-
 np.set_printoptions(precision=16)
 
 
@@ -42,8 +41,9 @@ class reluLayer():
     def get_input_grad(self, Y, output_grad):
         return np.multiply(D_relu(Y), output_grad)
 
-def result(input ,layers):
-    output = forward(input,layers)
+
+def result(input, layers):
+    output = forward(input, layers)
     return np.argmax(output[-1])
 
 
@@ -69,7 +69,7 @@ def backpropagation(activations, targets, layers):
         else:
             input_grad = layer.get_input_grad(Y, output_grad)
         X = activations[-1]
-        w_grad = np.float32(X.T.dot(input_grad)/input_grad.shape[0])
+        w_grad = np.float32(X.T.dot(input_grad) / input_grad.shape[0])
         if input_grad.shape[0] > 1:
             b_grad = np.float32(np.mean(input_grad, axis=0))
         else:
@@ -102,23 +102,27 @@ def initLayer(type, w, b):
 
 
 # list of dimension
-def dimInList(layers, nodes):
+def dimInList(type):
     dim = [14]
-    for i in range(layers):
-        dim.append(nodes)
+    if type==1:
+        dim.append(100)
+        dim.append(40)
+    elif type==2:
+        for i in range(6):
+            dim.append(28)
+    elif type==3:
+        for i in range(28):
+            dim.append(14)
     dim.append(4)
     return dim
 
 
-def training(layers, x, y, wfile, bfile, isTraining, rate, costList):
+def training(layers, x, y, wfile, bfile, isTraining, rate):
     # forward
     output = forward(x, layers)
 
     # save copy of output
     output_copy = copy.deepcopy(output)
-
-    #calculate cost
-    costList.append(layers[-1].cost(output[-1], y))
 
     # backpropagation
     w_grads, b_grads = backpropagation(output_copy, y, layers)
@@ -139,17 +143,17 @@ def q4():
 
     # load weight and bias for first NN
     b_100_40_4 = loadBias('../b/b-100-40-4.csv')
-    w_100_40_4 = loadWeight('../b/w-100-40-4.csv', [14, 100, 40, 4])
+    w_100_40_4 = loadWeight('../b/w-100-40-4.csv', dimInList(1))
     layer1 = initLayer(1, w_100_40_4, b_100_40_4)
 
     # load weight and bias for second NN
     b_28_6_4 = loadBias('../b/b-28-6-4.csv')
-    w_28_6_4 = loadWeight('../b/w-28-6-4.csv', dimInList(6, 28))
+    w_28_6_4 = loadWeight('../b/w-28-6-4.csv', dimInList(2))
     layer2 = initLayer(2, w_28_6_4, b_28_6_4)
 
     # load weight and bias for third NN
     b_14_28_4 = loadBias('../b/b-14-28-4.csv')
-    w_14_28_4 = loadWeight('../b/w-14-28-4.csv', dimInList(28, 14))
+    w_14_28_4 = loadWeight('../b/w-14-28-4.csv', dimInList(3))
     layer3 = initLayer(3, w_14_28_4, b_14_28_4)
 
     # run one-time training
@@ -173,25 +177,26 @@ def generateParameter(type):
     bias = []
     weight = []
     if type == 1:
-        weight.append(np.random.uniform(14, 100))
-        weight.append(np.random.uniform(100, 40))
-        weight.append(np.random.uniform(40, 4))
-        return weight, [np.ones(shape=(1, 100)), np.ones(shape=(1, 40)), np.ones(shape=(1, 4))]
+        r = math.sqrt(2.0 / 14)
+        weight.append(np.random.uniform(size=(14, 100), low=-r, high=r))
+        r = math.sqrt(2.0 / 100)
+        weight.append(np.random.uniform(size=(100, 40), low=-r, high=r))
+        r = math.sqrt(2.0 / 40)
+        weight.append(np.random.uniform(size=(40, 4), low=-r, high=r))
+        return weight, [np.zeros(shape=(1, 100)), np.zeros(shape=(1, 40)), np.zeros(shape=(1, 4))]
     elif type == 2:
-
-        #bias
+        # bias
         for i in range(6):
             bias.append(np.zeros(shape=(1, 28)))
         bias.append(np.zeros(shape=(1, 4)))
-
-        #weight
-        r = math.sqrt(2.0/14)
-        weight.append(np.random.uniform(size=(14, 28),low=-r,high=r))
+        # weight
+        r = math.sqrt(2.0 / 14)
+        weight.append(np.random.uniform(size=(14, 28), low=-r, high=r))
         for i in range(5):
-            r = math.sqrt(2.0/28)
-            weight.append(np.random.uniform(size=(28, 28),low=-r,high=r))
-        r = math.sqrt(2.0/28)
-        weight.append(np.random.uniform(size=(28, 4),low=-r,high=r))
+            r = math.sqrt(2.0 / 28)
+            weight.append(np.random.uniform(size=(28, 28), low=-r, high=r))
+        r = math.sqrt(2.0 / 28)
+        weight.append(np.random.uniform(size=(28, 4), low=-r, high=r))
         return weight, bias
     elif type == 3:
         for i in range(28):
@@ -201,94 +206,100 @@ def generateParameter(type):
         weight.append(np.random.randn(14, 4))
         return weight, bias
 
-def loadinitW(path,loop):
+
+def generateParam(list):
+    bias = []
+    weight = []
+    for i in range(len(list)-1):
+        r = math.sqrt(2.0 / list[i])
+        weight.append(np.random.uniform(size=(list[i], list[i+1]), low=-r, high=r))
+        bias.append(np.zeros(shape=(1, list[i+1])))
+    return weight,bias
+
+
+def loadinitW(path, loop):
     w = []
     for i in range(loop):
-        w.append(np.loadtxt(path+'/w'+str(i)))
+        w.append(np.loadtxt(path + '/w' + str(i)))
     return w
 
-def storeParameter(path,loop,w):
+
+def storeParameter(path, loop, w):
     shutil.rmtree(path)
     os.makedirs(path)
     for i in range(loop):
         np.savetxt(path + '/w' + str(i), w[i])
 
-def accuracy(input,layers,target):
-    output = forward(input,layers)
+
+def accuracy_cost(input, layers, target):
+    output = forward(input, layers)
+    cost = layers[-1].cost(output[-1], target)
     output_digit = np.zeros_like(output[-1])
     output_digit[np.arange(len(output[-1])), output[-1].argmax(1)] = 1
     tf = np.equal(output_digit, target).all(axis=1)
-    return np.float32(np.sum(tf))/np.float32(target.shape[0])*100
+    return np.float32(np.sum(tf)) / np.float32(target.shape[0]) * 100, cost
+
 
 def q123():
-    x_train, x_test, y_train, y_test = loadTraningTestData()
-
     # initial weight and bias for first NN
-    w_100_40_4, b_100_40_4 = generateParameter(1)
-    # w_100_40_4 = loadinitW('../initParam1',3)
+    w_100_40_4, b_100_40_4 = generateParam(dimInList(1))
     layer1 = initLayer(1, w_100_40_4, b_100_40_4)
-    #storeParameter('../initParam1',3,w_100_40_4)
-
-
-    #initial weight and bias for second NN
-    w_28_6_4, b_28_6_4 = generateParameter(2)
+    # initial weight and bias for second NN
+    w_28_6_4, b_28_6_4 = generateParam(dimInList(2))
     layer2 = initLayer(2, w_28_6_4, b_28_6_4)
+    # initial weight and bias for third NN
+    w_14_28_4, b_14_28_4 = generateParam(dimInList(3))
+    layer3 = initLayer(3, w_14_28_4, b_14_28_4)
+
+    #oneScores_train, oneCosts_train, oneScores_test,oneCosts_test = stochastic_gradient_descend(50, 0.1, layer1, 50)
+    #twoScores_train, twoCosts_train, twoScores_test, twoCosts_test = stochastic_gradient_descend(50, 0.1, layer2, 100)
+    threeScores_train, threeCosts_train, threeScores_test, threeCosts_test = stochastic_gradient_descend(32, 1, layer3, 100)
+
+    #line1 = plt.plot(oneCosts_train)
+    #plt.setp(line1, color='b', linewidth=1.0)
+
+    # line2 = plt.plot(twoCosts_train)
+    # plt.setp(line2, color='g', linewidth=1.0)
     #
-    # # initial weight and bias for third NN
-    # w_14_28_4,b_14_28_4 = generateParameter(3)
-    # layer3 = initLayer(3, w_14_28_4, b_14_28_4)
+    line3 = plt.plot(threeCosts_train)
+    plt.setp(line3, color='r', linewidth=1.0)
 
-
-
-    cost = []
-    score = []
-    step = 32
-    learning_rate = 0.25
-    usedLayer = layer2
-
-    for i in range(100):
-        x_train,y_train = unison_shuffled_copies(x_train,y_train)
-        for i in range(0,x_train.shape[0],step):
-            training(usedLayer, x_train[i:i+step], y_train[i:i+step], '', '', True, learning_rate, cost)
-            score.append(accuracy(x_train,usedLayer,y_train))
-
-    print 'NN is trained'
-    print np.amax(score)
-    line = plt.plot(cost)
-    plt.setp(line, color='b', linewidth=1.0)
     plt.ylabel('Cross Entropy Cost')
     plt.show()
+    raw_input()
 
-    # for i in range(len(x_test)):
-    #     training(layer1, np.array([x_test[i]]), np.array([y_test[i]]), '', '', True, 0.5, cost_test)
-    # print 'NN1 is tested'
-    #
-    # for i in range(len(x_train)):
-    #     training(layer2, np.array([x_train[i]]), np.array([y_train[i]]), '', '', True, 0.5, cost2)
-    # print 'NN2 is trained'
-    #
-    # for i in range(len(x_train)):
-    #     training(layer3, np.array([x_train[i]]), np.array([y_train[i]]), '', '', True, 0.5, cost3)
-    # print 'NN3 is trained'
 
-    #print 'NN1 return result %d' % result(np.array([[-1, 1, 1, 1, -1, -1, 1, -1, 1, 1, -1, -1, 1, 1]]),layer1)
-    # print 'NN2 return result %d' % result(np.array([[-1, 1, 1, 1, -1, -1, 1, -1, 1, 1, -1, -1, 1, 1]]), layer2)
-    # print 'NN3 return result %d' % result(np.array([[-1, 1, 1, 1, -1, -1, 1, -1, 1, 1, -1, -1, 1, 1]]), layer3)
 
-    # line1 = plt.plot(cost1)
-    # plt.setp(line1, color='b', linewidth=1.0)
-    # plt.ylabel('Cross Entropy Cost')
-    # plt.show()
+def stochastic_gradient_descend(step, learning_rate, layers, iter):
+    x_train, x_test, y_train, y_test = loadTraningTestData()
+    costs_test = []
+    scores_test = []
+    costs_train = []
+    scores_train = []
+    for j in range(iter):
+        x_train, y_train = unison_shuffled_copies(x_train, y_train)
+        for i in range(0, x_train.shape[0], step):
+            training(layers, x_train[i:i + step], y_train[i:i + step], '', '', True, learning_rate)
+        score_train, cost_train = accuracy_cost(x_train, layers, y_train)
+        score_test, cost_test = accuracy_cost(x_test, layers, y_test)
+        print 'iteration % d, the accuracy on train set is %.2f , and cost is %.2f' %(j+1,score_train,cost_train)
+        print 'iteration %d, the accuracy on test set is %.2f , and cost is %.2f' % (j + 1, score_test, cost_test)
+        scores_test.append(score_test)
+        costs_test.append(cost_test)
+        scores_train.append(score_train)
+        costs_train.append(cost_train)
+    # print 'NN is trained, the accuracy on train set is %.2f , the ' % np.amax(scores)
+    return scores_train, costs_train,scores_test,costs_test
+
 
 def unison_shuffled_copies(a, b):
     assert len(a) == len(b)
     p = np.random.permutation(len(a))
-    return a[p],b[p]
+    return a[p], b[p]
+
 
 def test():
-    a = np.array([[1,1,1,1],[2,2,2,2],[3,3,3,3,],[4,4,4,4]])
-    b = np.array([[1],[2],[3],[4]])
-    unison_shuffled_copies(a,b)
+    return
 
 
 if __name__ == "__main__":
